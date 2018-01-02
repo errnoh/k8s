@@ -1,0 +1,4 @@
+*.swp
+vendor
+example/watch-example
+_*
