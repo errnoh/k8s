@@ -1,10 +1,13 @@
 package watch
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -59,7 +62,21 @@ type Event struct {
 }
 
 type Metadata struct {
-	Identifier string
+	Function, Identifier, Namespace string
+}
+
+type ErrWatcher Metadata
+
+func (err ErrWatcher) Error() string {
+	return fmt.Sprintf("%s/%s/%s: Watcher stopped", err.Function, err.Identifier, err.Namespace)
+}
+
+func (err ErrWatcher) GetObjectKind() schema.ObjectKind {
+	return nil
+}
+
+func (err ErrWatcher) DeepCopyObject() runtime.Object {
+	return err
 }
 
 func Deployments(opts metav1.ListOptions) {
@@ -69,6 +86,11 @@ func Deployments(opts metav1.ListOptions) {
 				// watch.Interface
 				if watcher, err := w.client.ExtensionsV1beta1().Deployments(ns).Watch(opts); err == nil {
 					wg.Add(1)
+					metadata := Metadata{
+						Function:   "Deployments",
+						Identifier: w.metadata.Identifier,
+						Namespace:  ns,
+					}
 				loop:
 					for {
 						select {
@@ -79,13 +101,14 @@ func Deployments(opts metav1.ListOptions) {
 							break loop
 						case v, ok := <-watcher.ResultChan():
 							if ok {
-								watchchan <- Event{Event: v, Metadata: w.metadata}
+								watchchan <- Event{Event: v, Metadata: metadata}
 							} else {
 								break loop
 							}
 						}
 					}
 					glog.Errorf("Watcher for namespace '%s' exited", ns)
+					watchchan <- Event{Event: watch.Event{Type: "Error", Object: ErrWatcher(metadata)}, Metadata: metadata}
 					wg.Done()
 					return
 				} else {

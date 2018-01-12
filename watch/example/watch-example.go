@@ -58,12 +58,15 @@ func main() {
 					glog.Infof("[%s] Deployment %s container %s is running image %s", val.Namespace, val.Name, container.Name, container.Image)
 
 				}
+			case watch.ErrWatcher:
+				glog.Error(val.Error())
+				// One might for example want to watch.Close() here, or try to recreate the watcher.
 			}
 		}
 		glog.Error("Listener goroutine exited")
 	}()
 
-	time.Sleep(time.Minute)
+	time.Sleep(time.Second * 30)
 	watch.Close()
 	glog.Info("Stopping")
 }
