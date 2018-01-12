@@ -47,12 +47,12 @@ func main() {
 		glog.Fatalf("Error when trying to create client: %s", err)
 	}
 
-	watch.Register(kubeClient, strings.Split(*conf_namespaces, ",")...)
+	watch.Register("local", kubeClient, strings.Split(*conf_namespaces, ",")...)
 	watch.Deployments(options)
 
 	go func() {
 		for item := range watch.Channel() {
-			switch val := item.Object.(type) {
+			switch val := item.Event.Object.(type) {
 			case *extv1beta1.Deployment:
 				for _, container := range val.Spec.Template.Spec.Containers {
 					glog.Infof("[%s] Deployment %s container %s is running image %s", val.Namespace, val.Name, container.Name, container.Image)

@@ -6,7 +6,7 @@ import (
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
-	apiwatch "k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	watchchan = make(chan apiwatch.Event)
+	watchchan = make(chan Event)
 	closechan = make(chan struct{})
 	wg        = new(sync.WaitGroup)
 	clients   []*client
@@ -23,14 +23,15 @@ var (
 type client struct {
 	client     *kubernetes.Clientset
 	namespaces []string
+	metadata   Metadata
 }
 
-func Register(cl *kubernetes.Clientset, namespace ...string) {
+func Register(identifier string, cl *kubernetes.Clientset, namespace ...string) {
 	if len(namespace) == 0 || (len(namespace) == 1 && len(namespace[0]) == 0) {
 		glog.Fatal("Trying to start watcher with 0 namespaces")
 		// TODO: Maybe default to "default" (or even better: own namespace?)
 	}
-	c := &client{cl, make([]string, 0, 10)}
+	c := &client{cl, make([]string, 0, 10), Metadata{Identifier: identifier}}
 	if namespaces, err := c.client.CoreV1().Namespaces().List(metav1.ListOptions{}); err == nil {
 	loop:
 		for _, ns := range namespace {
@@ -48,8 +49,17 @@ func Register(cl *kubernetes.Clientset, namespace ...string) {
 	clients = append(clients, c)
 }
 
-func Channel() <-chan apiwatch.Event {
-	return (<-chan apiwatch.Event)(watchchan)
+func Channel() <-chan Event {
+	return (<-chan Event)(watchchan)
+}
+
+type Event struct {
+	Event    watch.Event
+	Metadata Metadata
+}
+
+type Metadata struct {
+	Identifier string
 }
 
 func Deployments(opts metav1.ListOptions) {
@@ -69,7 +79,7 @@ func Deployments(opts metav1.ListOptions) {
 							break loop
 						case v, ok := <-watcher.ResultChan():
 							if ok {
-								watchchan <- v
+								watchchan <- Event{Event: v, Metadata: w.metadata}
 							} else {
 								break loop
 							}
