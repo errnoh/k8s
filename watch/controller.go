@@ -21,6 +21,7 @@ var (
 	closechan = make(chan struct{})
 	wg        = new(sync.WaitGroup)
 	clients   []*client
+	running   = true
 )
 
 type client struct {
@@ -119,9 +120,24 @@ func Deployments(opts metav1.ListOptions) {
 	}
 }
 
+type CloseComplete struct{}
+
+func (cc CloseComplete) GetObjectKind() schema.ObjectKind {
+	return nil
+}
+
+func (cc CloseComplete) DeepCopyObject() runtime.Object {
+	return cc
+}
+
 func Close() {
-	close(closechan)
-	wg.Wait()
+	if running {
+		glog.Warningf("Shutting down active listeners")
+		close(closechan)
+		wg.Wait()
+		running = false
+		watchchan <- Event{Event: watch.Event{Type: "Error", Object: CloseComplete{}}, Metadata: Metadata{Function: "Close"}}
+	}
 }
 
 func ClientFromCluster() (client *kubernetes.Clientset, err error) {

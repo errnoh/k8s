@@ -61,6 +61,8 @@ func main() {
 			case watch.ErrWatcher:
 				glog.Error(val.Error())
 				// One might for example want to watch.Close() here, or try to recreate the watcher.
+			case watch.CloseComplete:
+				glog.Info("Finished closing all listeners")
 			}
 		}
 		glog.Error("Listener goroutine exited")
@@ -68,5 +70,6 @@ func main() {
 
 	time.Sleep(time.Second * 30)
 	watch.Close()
+	time.Sleep(time.Second * 5)
 	glog.Info("Stopping")
 }
