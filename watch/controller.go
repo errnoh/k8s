@@ -80,14 +80,14 @@ func (err ErrWatcher) DeepCopyObject() runtime.Object {
 	return err
 }
 
-type watcherFn func(*client, string, metav1.ListOptions) (watch.Interface, error)
+type Watcher func(*client, string, metav1.ListOptions) (watch.Interface, error)
 
 func DaemonSets(opts metav1.ListOptions) {
 	daemonSets := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
 		return w.client.ExtensionsV1beta1().DaemonSets(ns).Watch(opts)
 	}
 
-	watchers(opts, "DaemonSets", daemonSets)
+	Watchers(opts, "DaemonSets", daemonSets)
 }
 
 func Deployments(opts metav1.ListOptions) {
@@ -95,7 +95,7 @@ func Deployments(opts metav1.ListOptions) {
 		return w.client.ExtensionsV1beta1().Deployments(ns).Watch(opts)
 	}
 
-	watchers(opts, "Deployments", deployments)
+	Watchers(opts, "Deployments", deployments)
 }
 
 func Ingresses(opts metav1.ListOptions) {
@@ -103,7 +103,7 @@ func Ingresses(opts metav1.ListOptions) {
 		return w.client.ExtensionsV1beta1().Ingresses(ns).Watch(opts)
 	}
 
-	watchers(opts, "Ingresses", ingresses)
+	Watchers(opts, "Ingresses", ingresses)
 }
 
 func PodSecurityPolicies(opts metav1.ListOptions) {
@@ -111,7 +111,7 @@ func PodSecurityPolicies(opts metav1.ListOptions) {
 		return w.client.ExtensionsV1beta1().PodSecurityPolicies().Watch(opts)
 	}
 
-	watchers(opts, "PodSecurityPolicies", podSecurityPolicies)
+	Watchers(opts, "PodSecurityPolicies", podSecurityPolicies)
 }
 
 func ReplicaSets(opts metav1.ListOptions) {
@@ -119,18 +119,18 @@ func ReplicaSets(opts metav1.ListOptions) {
 		return w.client.ExtensionsV1beta1().ReplicaSets(ns).Watch(opts)
 	}
 
-	watchers(opts, "ReplicaSets", replicaSets)
+	Watchers(opts, "ReplicaSets", replicaSets)
 }
 
-func watchers(opts metav1.ListOptions, metadataFunction string, fn watcherFn) {
+func Watchers(opts metav1.ListOptions, name string, fn Watcher) {
 	for _, w := range clients {
 		for _, ns := range w.namespaces {
 			go func(w *client, ns string) {
 				// watch.Interface
-				if watcher, err := fn(w, ns, opts); err == nil { // w.client.ExtensionsV1beta1().Deployments(ns).Watch(opts); err == nil {
+				if watcher, err := fn(w, ns, opts); err == nil {
 					wg.Add(1)
 					metadata := Metadata{
-						Function:   metadataFunction,
+						Function:   name,
 						Identifier: w.metadata.Identifier,
 						Namespace:  ns,
 					}
