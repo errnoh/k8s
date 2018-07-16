@@ -139,7 +139,7 @@ func Watchers(opts metav1.ListOptions, name string, fn Watcher) {
 						select {
 						case <-closechan:
 							watcher.Stop()
-							for _ = range watcher.ResultChan() {
+							for range watcher.ResultChan() {
 							}
 							break loop
 						case v, ok := <-watcher.ResultChan():
