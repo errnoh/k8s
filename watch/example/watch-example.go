@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	watch "github.com/errnoh/k8s/watch"
 	"github.com/golang/glog"
+	watch "github.com/weeezes/k8s/watch"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -48,7 +48,11 @@ func main() {
 	}
 
 	watch.Register("local", kubeClient, strings.Split(*conf_namespaces, ",")...)
+	watch.DaemonSets(options)
 	watch.Deployments(options)
+	watch.Ingresses(options)
+	watch.PodSecurityPolicies(options)
+	watch.ReplicaSets(options)
 
 	go func() {
 		for item := range watch.Channel() {
@@ -58,11 +62,21 @@ func main() {
 					glog.Infof("[%s] Deployment %s container %s is running image %s", val.Namespace, val.Name, container.Name, container.Image)
 
 				}
+			case *extv1beta1.DaemonSet:
+				glog.Info("DaemonSet")
+			case *extv1beta1.Ingress:
+				glog.Info("Ingresses")
+			case *extv1beta1.PodSecurityPolicy:
+				glog.Info("PodSecurityPolicies")
+			case *extv1beta1.ReplicaSet:
+				glog.Info("ReplicaSets")
 			case watch.ErrWatcher:
 				glog.Error(val.Error())
 				// One might for example want to watch.Close() here, or try to recreate the watcher.
 			case watch.CloseComplete:
 				glog.Info("Finished closing all listeners")
+			default:
+				glog.Info("default")
 			}
 		}
 		glog.Error("Listener goroutine exited")
