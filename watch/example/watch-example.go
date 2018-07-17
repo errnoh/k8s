@@ -8,6 +8,7 @@ import (
 	"github.com/golang/glog"
 	watch "github.com/weeezes/k8s/watch"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -53,6 +54,17 @@ func main() {
 	watch.Ingresses(options)
 	watch.PodSecurityPolicies(options)
 	watch.ReplicaSets(options)
+	watch.ComponentStatuses(options)
+	watch.ConfigMaps(options)
+	watch.Endpoints(options)
+	watch.LimitRanges(options)
+	watch.Namespaces(options)
+	watch.Nodes(options)
+	watch.PersistentVolumeClaims(options)
+	watch.PersistentVolumes(options)
+	watch.Pods(options)
+	watch.ServiceAccounts(options)
+	watch.Services(options)
 
 	go func() {
 		for item := range watch.Channel() {
@@ -70,6 +82,28 @@ func main() {
 				glog.Info("PodSecurityPolicies")
 			case *extv1beta1.ReplicaSet:
 				glog.Info("ReplicaSets")
+			case *corev1.ComponentStatus:
+				glog.Info("ComponentStatus")
+			case *corev1.ConfigMap:
+				glog.Info("ConfigMap")
+			case *corev1.Endpoints:
+				glog.Info("Endpoints")
+			case *corev1.LimitRange:
+				glog.Info("LimitRange")
+			case *corev1.Namespace:
+				glog.Info("Namespace")
+			case *corev1.Node:
+				glog.Infof("Node %s %s: %s", val.Spec.PodCIDR, val.Spec.ProviderID, val.Status.String())
+			case *corev1.PersistentVolumeClaim:
+				glog.Info("PersistentVolumeClaim")
+			case *corev1.PersistentVolume:
+				glog.Info("PersistentVolume")
+			case *corev1.Pod:
+				glog.Info("Pod")
+			case *corev1.ServiceAccount:
+				glog.Info("ServiceAccount")
+			case *corev1.Service:
+				glog.Info("Service")
 			case watch.ErrWatcher:
 				glog.Error(val.Error())
 				// One might for example want to watch.Close() here, or try to recreate the watcher.
