@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
+	watch "github.com/errnoh/k8s/watch"
 	"github.com/golang/glog"
-	watch "github.com/weeezes/k8s/watch"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
