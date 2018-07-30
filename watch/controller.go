@@ -80,15 +80,145 @@ func (err ErrWatcher) DeepCopyObject() runtime.Object {
 	return err
 }
 
+type Watcher func(*client, string, metav1.ListOptions) (watch.Interface, error)
+
+func DaemonSets(opts metav1.ListOptions) {
+	daemonSets := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.ExtensionsV1beta1().DaemonSets(ns).Watch(opts)
+	}
+
+	Watchers(opts, "DaemonSets", daemonSets)
+}
+
 func Deployments(opts metav1.ListOptions) {
+	deployments := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.ExtensionsV1beta1().Deployments(ns).Watch(opts)
+	}
+
+	Watchers(opts, "Deployments", deployments)
+}
+
+func Ingresses(opts metav1.ListOptions) {
+	ingresses := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.ExtensionsV1beta1().Ingresses(ns).Watch(opts)
+	}
+
+	Watchers(opts, "Ingresses", ingresses)
+}
+
+func PodSecurityPolicies(opts metav1.ListOptions) {
+	podSecurityPolicies := func(w *client, _ string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.ExtensionsV1beta1().PodSecurityPolicies().Watch(opts)
+	}
+
+	Watchers(opts, "PodSecurityPolicies", podSecurityPolicies)
+}
+
+func ReplicaSets(opts metav1.ListOptions) {
+	replicaSets := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.ExtensionsV1beta1().ReplicaSets(ns).Watch(opts)
+	}
+
+	Watchers(opts, "ReplicaSets", replicaSets)
+}
+
+func ComponentStatuses(opts metav1.ListOptions) {
+	componentStatuses := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().ComponentStatuses().Watch(opts)
+	}
+
+	Watchers(opts, "ComponentStatuses", componentStatuses)
+}
+
+func ConfigMaps(opts metav1.ListOptions) {
+	configMaps := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().ConfigMaps(ns).Watch(opts)
+	}
+
+	Watchers(opts, "ConfigMaps", configMaps)
+}
+
+func Endpoints(opts metav1.ListOptions) {
+	endpoints := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().Endpoints(ns).Watch(opts)
+	}
+
+	Watchers(opts, "Endpoints", endpoints)
+}
+
+func LimitRanges(opts metav1.ListOptions) {
+	limitRanges := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().LimitRanges(ns).Watch(opts)
+	}
+
+	Watchers(opts, "LimitRanges", limitRanges)
+}
+
+func Namespaces(opts metav1.ListOptions) {
+	namespaces := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().Namespaces().Watch(opts)
+	}
+
+	Watchers(opts, "Namespaces", namespaces)
+}
+
+func Nodes(opts metav1.ListOptions) {
+	nodes := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().Nodes().Watch(opts)
+	}
+
+	Watchers(opts, "Nodes", nodes)
+}
+
+func PersistentVolumeClaims(opts metav1.ListOptions) {
+	persistentVolumeClaims := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().PersistentVolumeClaims(ns).Watch(opts)
+	}
+
+	Watchers(opts, "PersistentVolumeClaims", persistentVolumeClaims)
+}
+
+func PersistentVolumes(opts metav1.ListOptions) {
+	persistentVolumes := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().PersistentVolumes().Watch(opts)
+	}
+
+	Watchers(opts, "PersistentVolumes", persistentVolumes)
+}
+
+func Pods(opts metav1.ListOptions) {
+	pods := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().Pods(ns).Watch(opts)
+	}
+
+	Watchers(opts, "Pods", pods)
+}
+
+func ServiceAccounts(opts metav1.ListOptions) {
+	serviceAccounts := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().ServiceAccounts(ns).Watch(opts)
+	}
+
+	Watchers(opts, "ServiceAccounts", serviceAccounts)
+}
+
+func Services(opts metav1.ListOptions) {
+	services := func(w *client, ns string, opts metav1.ListOptions) (watch.Interface, error) {
+		return w.client.CoreV1().Services(ns).Watch(opts)
+	}
+
+	Watchers(opts, "Services", services)
+}
+
+func Watchers(opts metav1.ListOptions, name string, fn Watcher) {
 	for _, w := range clients {
 		for _, ns := range w.namespaces {
 			go func(w *client, ns string) {
 				// watch.Interface
-				if watcher, err := w.client.ExtensionsV1beta1().Deployments(ns).Watch(opts); err == nil {
+				if watcher, err := fn(w, ns, opts); err == nil {
 					wg.Add(1)
 					metadata := Metadata{
-						Function:   "Deployments",
+						Function:   name,
 						Identifier: w.metadata.Identifier,
 						Namespace:  ns,
 					}
@@ -97,7 +227,7 @@ func Deployments(opts metav1.ListOptions) {
 						select {
 						case <-closechan:
 							watcher.Stop()
-							for _ = range watcher.ResultChan() {
+							for range watcher.ResultChan() {
 							}
 							break loop
 						case v, ok := <-watcher.ResultChan():
